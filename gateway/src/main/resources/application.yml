@@ -1,0 +1,114 @@
+server:
+  port: 8088
+
+---
+
+
+keycloak-client:
+  server-url: http://localhost:9090
+  realm: master
+
+spring:
+  config:
+    activate:
+      on-profile: default
+  cloud:
+    gateway:
+      default-filters:
+        - TokenRelay 
+      routes:
+        - id: application
+          uri: http://localhost:8082
+          predicates:
+            - Path=/applications/**,  /내민원조회/**
+        - id: process1
+          uri: http://localhost:8083
+          predicates:
+            - Path=/investigations/**, /processings/**,  
+        - id: analysis1
+          uri: http://localhost:8084
+          predicates:
+            - Path=/analysis1s/**,  
+        - id: frontend
+          uri: http://localhost:8080
+          predicates:
+            - Path=/**
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: ${keycloak-client.server-url}/realms/${keycloak-client.realm}
+            user-name-attribute: preferred_username
+        registration:
+          keycloak:
+            client-id: "<client-id>"
+            client-secret: 
+            redirect-uri: "gateway-path/login/oauth2/code/client-name"
+            authorization-grant-type: authorization_code
+            scope: openid
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${keycloak-client.server-url}/realms/${keycloak-client.realm}/protocol/openid-connect/certs
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: docker
+  cloud:
+    gateway:
+      routes:
+        - id: application
+          uri: http://application:8080
+          predicates:
+            - Path=/applications/** /내민원조회/**
+        - id: process1
+          uri: http://process1:8080
+          predicates:
+            - Path=/investigations/**/processings/** 
+        - id: analysis1
+          uri: http://analysis1:8080
+          predicates:
+            - Path=/analysis1s/** 
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "*"
+            allowedMethods:
+              - "*"
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: ${keycloak-client.server-url}/realms/${keycloak-client.realm}
+            user-name-attribute: preferred_username
+        registration:
+          keycloak:
+            client-id: "<client-id>"
+            client-secret: 
+            redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
+            authorization-grant-type: authorization_code
+            scope: openid
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${keycloak-client.server-url}/realms/${keycloak-client.realm}/protocol/openid-connect/certs
+
+server:
+  port: 8080
